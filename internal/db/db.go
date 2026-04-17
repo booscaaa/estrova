@@ -14,9 +14,13 @@ type DB struct {
 	sql *sql.DB
 }
 
-func Open() (*DB, error) {
+func Path() string {
 	home, _ := os.UserHomeDir()
-	path := filepath.Join(home, ".estrova.db")
+	return filepath.Join(home, ".estrova.db")
+}
+
+func Open() (*DB, error) {
+	path := Path()
 
 	sqlDB, err := sql.Open("sqlite", path+"?_journal=WAL&_timeout=5000")
 	if err != nil {
@@ -33,6 +37,12 @@ func Open() (*DB, error) {
 
 func (d *DB) Close() {
 	_ = d.sql.Close()
+}
+
+// Backup creates a consistent copy of the database at dst using VACUUM INTO.
+func (d *DB) Backup(dst string) error {
+	_, err := d.sql.Exec(`VACUUM INTO ?`, dst)
+	return err
 }
 
 func (d *DB) migrate() error {
