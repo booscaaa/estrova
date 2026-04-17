@@ -18,10 +18,12 @@ Um servidor MCP (Model Context Protocol) que integra seus dados de treino do Str
     <td align="center"><em>Plano de treino por objetivo</em></td>
   </tr>
   <tr>
-    <td colspan="2"><img src="docs/screenshots/activity-detail.png" alt="Detalhe de Atividade" /></td>
+    <td><img src="docs/screenshots/session-drawer.png" alt="Detalhe da Sessão" /></td>
+    <td><img src="docs/screenshots/activity-detail.png" alt="Detalhe de Atividade" /></td>
   </tr>
   <tr>
-    <td colspan="2" align="center"><em>Detalhe de atividade com gráficos por km</em></td>
+    <td align="center"><em>Drawer de detalhe da sessão de treino</em></td>
+    <td align="center"><em>Detalhe de atividade com gráficos por km</em></td>
   </tr>
 </table>
 
