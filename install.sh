@@ -83,17 +83,17 @@ if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
   exit 0
 fi
 
-# Install strava-coach skills for Claude Code
+# Install estrova skills for Claude Code
 SKILLS_DIR="$HOME/.claude/plugins/local/plugins/estrova/skills"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOCAL_SKILLS="${SCRIPT_DIR}/skills/estrova"
+SKILLS_RAW="https://raw.githubusercontent.com/${REPO}/main/skills/estrova"
 
-if [ -d "$LOCAL_SKILLS" ]; then
-  echo "Installing estrova skills..."
-  mkdir -p "$SKILLS_DIR"
-  cp -r "$LOCAL_SKILLS"/. "$SKILLS_DIR/"
+echo "Installing estrova skills..."
+for skill in estrova-coach estrova-analysis estrova-plan estrova-resolve-conflicts; do
+  mkdir -p "$SKILLS_DIR/$skill"
+  curl -fsSL "${SKILLS_RAW}/${skill}/SKILL.md" -o "$SKILLS_DIR/$skill/SKILL.md"
+done
 
-  SETTINGS="$HOME/.claude/settings.json"
+SETTINGS="$HOME/.claude/settings.json"
   if [ -f "$SETTINGS" ]; then
     if ! grep -q '"estrova@local"' "$SETTINGS"; then
       python3 - "$SETTINGS" <<'PYEOF'
@@ -127,8 +127,7 @@ PYEOF
 }
 EOF
   fi
-  echo "Skills installed!"
-fi
+echo "Skills installed!"
 
 # Register MCP server in Claude Code
 if command -v claude &>/dev/null; then
