@@ -83,6 +83,53 @@ if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
   exit 0
 fi
 
+# Install strava-coach skills for Claude Code
+SKILLS_DIR="$HOME/.claude/plugins/local/plugins/estrova/skills"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOCAL_SKILLS="${SCRIPT_DIR}/skills/estrova"
+
+if [ -d "$LOCAL_SKILLS" ]; then
+  echo "Installing estrova skills..."
+  mkdir -p "$SKILLS_DIR"
+  cp -r "$LOCAL_SKILLS"/. "$SKILLS_DIR/"
+
+  SETTINGS="$HOME/.claude/settings.json"
+  if [ -f "$SETTINGS" ]; then
+    if ! grep -q '"estrova@local"' "$SETTINGS"; then
+      python3 - "$SETTINGS" <<'PYEOF'
+import json, sys
+path = sys.argv[1]
+with open(path) as f:
+    s = json.load(f)
+s.setdefault("enabledPlugins", {})["estrova@local"] = True
+s.setdefault("extraKnownMarketplaces", {}).setdefault("local", {
+    "source": {"source": "directory", "path": str(__import__('pathlib').Path.home() / ".claude/plugins/local")}
+})
+with open(path, "w") as f:
+    json.dump(s, f, indent=4)
+PYEOF
+    fi
+  else
+    mkdir -p "$(dirname "$SETTINGS")"
+    cat > "$SETTINGS" <<EOF
+{
+    "enabledPlugins": {
+        "estrova@local": true
+    },
+    "extraKnownMarketplaces": {
+        "local": {
+            "source": {
+                "source": "directory",
+                "path": "${HOME}/.claude/plugins/local"
+            }
+        }
+    }
+}
+EOF
+  fi
+  echo "Skills installed!"
+fi
+
 # Register MCP server in Claude Code
 if command -v claude &>/dev/null; then
   echo "Registering estrova in Claude Code..."
