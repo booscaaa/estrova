@@ -132,7 +132,21 @@ func updateSkills() error {
 		return err
 	}
 
-	skillsDir := filepath.Join(home, ".claude", "plugins", "local", "plugins", "estrova", "skills")
+	pluginDir := filepath.Join(home, ".claude", "plugins", "local", "plugins", "estrova")
+	skillsDir := filepath.Join(pluginDir, "skills")
+
+	metaDir := filepath.Join(pluginDir, ".claude-plugin")
+	if err := os.MkdirAll(metaDir, 0755); err != nil {
+		return err
+	}
+	pluginJSON := []byte(`{
+  "name": "estrova",
+  "version": "1.0.0",
+  "description": "Personal Strava training coach — training plans, performance analysis and conflict resolution"
+}`)
+	if err := os.WriteFile(filepath.Join(metaDir, "plugin.json"), pluginJSON, 0644); err != nil {
+		return err
+	}
 
 	fmt.Println("Atualizando skills...")
 	for _, skill := range skills {
@@ -164,7 +178,75 @@ func updateSkills() error {
 		fmt.Printf("  ✓ %s\n", skill)
 	}
 
+	if err := updateMarketplace(home); err != nil {
+		return fmt.Errorf("marketplace: %w", err)
+	}
 	return updateSettings(home)
+}
+
+func updateMarketplace(home string) error {
+	marketplacePath := filepath.Join(home, ".claude", "plugins", "local", ".claude-plugin", "marketplace.json")
+
+	data, err := os.ReadFile(marketplacePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return writeDefaultMarketplace(marketplacePath, home)
+		}
+		return err
+	}
+
+	var m map[string]interface{}
+	if err := json.Unmarshal(data, &m); err != nil {
+		return err
+	}
+
+	plugins, _ := m["plugins"].([]interface{})
+	for _, p := range plugins {
+		if pm, ok := p.(map[string]interface{}); ok {
+			if pm["name"] == "estrova" {
+				return nil
+			}
+		}
+	}
+
+	m["plugins"] = append(plugins, map[string]interface{}{
+		"name":        "estrova",
+		"description": "Personal Strava training coach — training plans, performance analysis and conflict resolution",
+		"version":     "1.0.0",
+		"author":      map[string]interface{}{"name": "booscaaa"},
+		"source":      "./plugins/estrova",
+		"category":    "health",
+	})
+
+	out, err := json.MarshalIndent(m, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(marketplacePath, out, 0644)
+}
+
+func writeDefaultMarketplace(path, home string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return err
+	}
+	m := map[string]interface{}{
+		"$schema":     "https://anthropic.com/claude-code/marketplace.schema.json",
+		"name":        "local",
+		"description": "Local plugins for personal use",
+		"owner":       map[string]interface{}{"name": "booscaaa"},
+		"plugins": []interface{}{
+			map[string]interface{}{
+				"name":        "estrova",
+				"description": "Personal Strava training coach — training plans, performance analysis and conflict resolution",
+				"version":     "1.0.0",
+				"author":      map[string]interface{}{"name": "booscaaa"},
+				"source":      "./plugins/estrova",
+				"category":    "health",
+			},
+		},
+	}
+	out, _ := json.MarshalIndent(m, "", "  ")
+	return os.WriteFile(path, out, 0644)
 }
 
 func updateSettings(home string) error {
