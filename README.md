@@ -34,8 +34,9 @@ Um servidor MCP (Model Context Protocol) que integra seus dados de treino do Str
 - Autentica com o Strava via OAuth2 e sincroniza suas atividades em um banco SQLite local
 - Expõe 16 ferramentas MCP para o Claude ler seu perfil, estatísticas, zonas de FC, atividades e objetivos de treino
 - Gera e armazena planos de treino personalizados de múltiplas semanas com base no seu histórico
-- Detecta conflitos de agendamento entre múltiplos objetivos simultâneos
+- Detecta e resolve conflitos de agendamento entre múltiplos objetivos simultâneos
 - Serve um dashboard web em `http://localhost:3030` para gerenciamento visual do plano
+- Fornece backup e restauração do banco de dados via linha de comando
 
 ---
 
@@ -47,10 +48,12 @@ Um servidor MCP (Model Context Protocol) que integra seus dados de treino do Str
 4. [Configurando o Claude Code](#configurando-o-claude-code)
 5. [Autenticação inicial](#autenticação-inicial)
 6. [Sincronizando atividades](#sincronizando-atividades)
-7. [Criando um objetivo e plano de treino](#criando-um-objetivo-e-plano-de-treino)
-8. [Dashboard web](#dashboard-web)
-9. [Ferramentas MCP disponíveis](#ferramentas-mcp-disponíveis)
-10. [Banco de dados](#banco-de-dados)
+7. [Skills disponíveis no Claude Code](#skills-disponíveis-no-claude-code)
+8. [Criando um objetivo e plano de treino](#criando-um-objetivo-e-plano-de-treino)
+9. [Dashboard web](#dashboard-web)
+10. [Linha de comando (CLI)](#linha-de-comando-cli)
+11. [Ferramentas MCP disponíveis](#ferramentas-mcp-disponíveis)
+12. [Banco de dados](#banco-de-dados)
 
 ---
 
@@ -151,8 +154,7 @@ chmod +x /usr/local/bin/estrova
 4. Verifique:
 
 ```bash
-estrova
-# Estrova MCP server iniciado — Web UI: http://localhost:3030
+estrova --help
 ```
 
 ### Compilar do fonte (opcional)
@@ -265,12 +267,119 @@ As atividades sincronizadas são armazenadas localmente e associadas automaticam
 
 ---
 
+## Skills disponíveis no Claude Code
+
+As skills são atalhos inteligentes que ativam fluxos completos de interação com o estrova. Após a instalação, elas ficam disponíveis como comandos `/` no Claude Code.
+
+### `/estrova-coach` — Treinador pessoal
+
+Ponto de entrada principal. Verifica seu status, lista objetivos e orienta os próximos passos.
+
+```
+/estrova-coach
+```
+
+```
+como estou indo nos meus treinos?
+```
+
+```
+o que devo focar essa semana?
+```
+
+O coach verifica automaticamente:
+- Se você está autenticado (orienta `estrova_authenticate` se não estiver)
+- Se há atividades sincronizadas (sugere `estrova_sync` se necessário)
+- Seus objetivos ativos e o estado de cada plano
+
+---
+
+### `/estrova-plan` — Gerador de plano de treino
+
+Cria um plano de treino periodizado e personalizado para um objetivo específico, baseado no seu histórico real do Strava.
+
+```
+/estrova-plan
+```
+
+```
+gera um plano de treino para minha maratona
+```
+
+```
+quero um plano para o objetivo Meia Maratona POA
+```
+
+O que o plano inclui:
+- Semanas organizadas por fase (Base, Build, Peak, Taper)
+- Tipos de sessão: Easy, Long, Tempo, Interval, Race, Rest, Cross, Strength
+- Progressão de volume ≤ 10% por semana com semanas de recuperação a cada 3-4 semanas
+- Orientações de nutrição pré, durante e pós-treino para cada sessão
+- Respeito automático a sessões de outros objetivos ativos (sem conflitos)
+
+---
+
+### `/estrova-analysis` — Análise de desempenho
+
+Interpreta seus dados de treino e gera insights acionáveis sobre pontos fortes, áreas de melhoria e tendências.
+
+```
+/estrova-analysis
+```
+
+```
+analisa meus treinos dos últimos 30 dias
+```
+
+```
+quais são meus pontos fracos na corrida?
+```
+
+A análise cobre:
+- Volume e consistência semanal (últimas 4 vs últimas 8 semanas)
+- Distribuição de intensidade por zona de FC
+- Progressão de pace e distâncias máximas
+- Alertas de overtraining ou undertraining
+- Recomendações específicas e mensuráveis
+
+---
+
+### `/estrova-resolve-conflicts` — Resolver conflitos de planos
+
+Detecta sessões de treino que colidem no mesmo dia entre objetivos diferentes e propõe ajustes inteligentes antes de aplicá-los.
+
+```
+/estrova-resolve-conflicts
+```
+
+```
+tem conflito nos meus planos de treino?
+```
+
+```
+resolve os conflitos entre meus objetivos
+```
+
+Regras de resolução:
+- Sessão `Race` prevalece — a outra vira `Rest`
+- Sessão mais intensa prevalece sobre a mais leve
+- Em empate, o objetivo com data alvo mais próxima tem prioridade
+- `Long` nunca vira `Rest` — é convertido para `Easy` para preservar o volume
+
+O coach apresenta um resumo das mudanças propostas e aguarda sua confirmação antes de aplicar qualquer alteração.
+
+---
+
 ## Criando um objetivo e plano de treino
 
 ### 1. Criar um objetivo
 
 ```
-criar objetivo strava: Maratona em outubro de 2026
+criar objetivo: Maratona em outubro de 2026
+```
+
+```
+novo objetivo de ciclismo: 200km em junho
 ```
 
 O Claude chamará `estrova_create_goal` com parâmetros como:
@@ -292,7 +401,7 @@ gerar um plano de treino para meu objetivo Maratona 2026
 O Claude irá:
 
 1. Chamar `estrova_analyze_for_goal` — busca suas atividades recentes, zonas de FC, sessões de outros objetivos e restrições de agenda
-2. Usar esses dados para construir um plano personalizado de múltiplas semanas
+2. Construir um plano periodizado de múltiplas semanas personalizado ao seu histórico
 3. Chamar `estrova_save_plan` — persiste o plano no banco vinculado ao objetivo
 
 ### 3. Visualizar seu plano
@@ -303,7 +412,7 @@ mostrar meu plano de treino para Maratona 2026
 
 Ou abra o [dashboard web](#dashboard-web) em `http://localhost:3030`.
 
-### 4. Resolver conflitos
+### 4. Resolver conflitos entre objetivos
 
 Se você tiver múltiplos objetivos simultâneos, sessões de planos diferentes podem colidir no mesmo dia:
 
@@ -311,28 +420,117 @@ Se você tiver múltiplos objetivos simultâneos, sessões de planos diferentes 
 existe algum conflito nos meus planos de treino?
 ```
 
-O Claude chamará `estrova_list_conflicts` e ajudará a reagendar as sessões.
+```
+/estrova-resolve-conflicts
+```
 
 ---
 
 ## Dashboard web
 
-O servidor web inicia automaticamente junto com o servidor MCP.
+O servidor web inicia automaticamente junto com o servidor MCP na porta 3030.
 
-Abra [http://localhost:3030](http://localhost:3030) no seu navegador.
+**Abra no navegador:** [http://localhost:3030](http://localhost:3030)
 
-**Funcionalidades:**
+O dashboard é a interface visual principal do estrova. Nenhuma configuração extra é necessária — ele já está rodando enquanto o Claude Code usa o MCP.
 
-- Visão geral dos objetivos com progresso (sessões concluídas / total)
-- Visualização semanal do plano com detalhes das sessões
-- Lista de atividades com status de sincronização
-- Detector de conflitos entre todos os objetivos ativos
-- Edição individual de sessões (tipo, pace, zona de FC, distância, duração)
-- Dashboard com gráficos de volume semanal e tendência de pace
+**O que você encontra no dashboard:**
+
+| Seção | Conteúdo |
+|-------|----------|
+| **Visão geral** | KPIs globais: atividades sincronizadas, objetivos ativos, semanas de treino |
+| **Objetivos** | Cards com progresso de cada objetivo (sessões concluídas / total) |
+| **Plano semanal** | Calendário com as sessões da semana, tipos e paces |
+| **Detalhe da sessão** | Drawer com descrição, pace alvo, zona de FC, orientações de nutrição e status |
+| **Atividades** | Lista das atividades sincronizadas com link para o Strava |
+| **Conflitos** | Alerta visual quando dois objetivos têm sessões no mesmo dia |
+
+**Criar um objetivo pelo dashboard:**
+
+1. Abra [http://localhost:3030](http://localhost:3030)
+2. Clique em **Novo objetivo**
+3. Preencha nome, modalidade, tipo de meta, valor e data alvo
+4. Salve — o objetivo aparece listado e você pode pedir ao Claude Code para gerar o plano
+
+**Editar uma sessão pelo dashboard:**
+
+1. Clique sobre qualquer sessão no calendário semanal
+2. No drawer lateral, ajuste tipo, pace, distância, duração ou observações
+3. Salve — a alteração é imediata no banco
+
+---
+
+## Linha de comando (CLI)
+
+O binário `estrova` oferece subcomandos para operações fora do Claude Code.
+
+### `estrova` (sem argumentos)
+
+Inicia o servidor MCP no modo stdio, usado pelo Claude Code. Também sobe o dashboard web em `http://localhost:3030`.
+
+```bash
+estrova
+```
+
+### `estrova update`
+
+Atualiza o binário e as skills para a versão mais recente disponível no GitHub.
+
+```bash
+estrova update
+```
+
+Equivalente a pedir ao Claude Code:
+
+```
+atualizar o estrova
+```
+
+### `estrova backup [arquivo]`
+
+Cria uma cópia consistente do banco de dados usando `VACUUM INTO`. Se nenhum arquivo for informado, usa o nome `estrova-backup-YYYY-MM-DD.db`.
+
+```bash
+# Backup com nome automático (ex: estrova-backup-2026-04-17.db)
+estrova backup
+
+# Backup com nome personalizado
+estrova backup ~/backups/estrova-antes-da-maratona.db
+```
+
+Exemplo de saída:
+
+```
+Backup salvo em: estrova-backup-2026-04-17.db (1024 KB)
+```
+
+### `estrova restore <arquivo>`
+
+Restaura o banco de dados a partir de um arquivo de backup. Pede confirmação interativa antes de sobrescrever.
+
+```bash
+# Restaurar com confirmação
+estrova restore estrova-backup-2026-04-17.db
+
+# Restaurar sem confirmação (automação / scripts)
+estrova restore estrova-backup-2026-04-17.db --force
+```
+
+Exemplo de saída:
+
+```
+Isso substituirá o banco atual em /home/user/.estrova.db.
+Confirmar? [s/N] s
+Banco restaurado de estrova-backup-2026-04-17.db (1024 KB)
+```
+
+> **Dica:** Faça backup antes de grandes alterações no plano ou antes de resolver conflitos em lote.
 
 ---
 
 ## Ferramentas MCP disponíveis
+
+Estas são as ferramentas que o Claude Code pode chamar diretamente. As skills acima orquestram sequências dessas ferramentas.
 
 ### Autenticação
 
@@ -364,7 +562,7 @@ Abra [http://localhost:3030](http://localhost:3030) no seu navegador.
 | `estrova_create_goal` | `name`, `sport_type`, `target_type`, `target_value`, `target_date` | Cria um novo objetivo de treino |
 | `estrova_list_goals` | — | Lista todos os objetivos com progresso |
 | `estrova_delete_goal` | `goal_id` | Remove o objetivo e seu plano |
-| `estrova_analyze_for_goal` | `goal_id` | Coleta contexto para geração do plano |
+| `estrova_analyze_for_goal` | `goal_id` | Coleta contexto completo para geração do plano |
 | `estrova_save_plan` | `goal_id`, `plan_json` | Persiste o plano gerado no banco |
 | `estrova_get_plan` | `goal_id` | Retorna o plano organizado por semana |
 | `estrova_list_conflicts` | — | Detecta conflitos de agendamento entre objetivos |
@@ -395,6 +593,17 @@ Para inspecionar diretamente:
 ```bash
 sqlite3 ~/.estrova.db ".tables"
 sqlite3 ~/.estrova.db "SELECT name, target_date FROM goals;"
+sqlite3 ~/.estrova.db "SELECT session_type, date, distance_km FROM plan_sessions ORDER BY date LIMIT 10;"
+```
+
+**Backup e restauração:**
+
+```bash
+# Backup
+estrova backup ~/meu-backup.db
+
+# Restaurar
+estrova restore ~/meu-backup.db
 ```
 
 ---
