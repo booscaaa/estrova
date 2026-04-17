@@ -68,8 +68,8 @@ echo "  - Website: http://localhost"
 echo "  - Authorization Callback Domain: localhost"
 echo ""
 
-read -rp "Enter your Strava Client ID: " CLIENT_ID
-read -rsp "Enter your Strava Client Secret: " CLIENT_SECRET
+read -rp "Enter your Strava Client ID: " CLIENT_ID </dev/tty
+read -rsp "Enter your Strava Client Secret: " CLIENT_SECRET </dev/tty
 echo ""
 
 if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
