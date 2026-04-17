@@ -1,0 +1,22 @@
+# Binary
+estrova
+estrova.exe
+
+# Credentials
+.env
+.mcp.json
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# GoReleaser output
+dist/
+
+# Go
+vendor/
+
+# OS
+.DS_Store
+Thumbs.db
