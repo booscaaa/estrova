@@ -1,6 +1,6 @@
 # Binary
-estrova
-estrova.exe
+/estrova
+/estrova.exe
 
 # Credentials
 .env
