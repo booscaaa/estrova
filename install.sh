@@ -88,15 +88,69 @@ SKILLS_DIR="$HOME/.claude/plugins/local/plugins/estrova/skills"
 SKILLS_RAW="https://raw.githubusercontent.com/${REPO}/main/skills/estrova"
 
 echo "Installing estrova skills..."
+
+PLUGIN_DIR="$HOME/.claude/plugins/local/plugins/estrova"
+PLUGIN_META_DIR="$PLUGIN_DIR/.claude-plugin"
+mkdir -p "$PLUGIN_META_DIR"
+cat > "$PLUGIN_META_DIR/plugin.json" <<'PLUGEOF'
+{
+  "name": "estrova",
+  "version": "1.0.0",
+  "description": "Personal Strava training coach — training plans, performance analysis and conflict resolution"
+}
+PLUGEOF
+
 for skill in estrova-coach estrova-analysis estrova-plan estrova-resolve-conflicts; do
   mkdir -p "$SKILLS_DIR/$skill"
   curl -fsSL "${SKILLS_RAW}/${skill}/SKILL.md" -o "$SKILLS_DIR/$skill/SKILL.md"
 done
 
+MARKETPLACE="$HOME/.claude/plugins/local/.claude-plugin/marketplace.json"
+if [ -f "$MARKETPLACE" ]; then
+  if ! grep -q '"estrova"' "$MARKETPLACE"; then
+    python3 - "$MARKETPLACE" <<'PYEOF'
+import json, sys
+path = sys.argv[1]
+with open(path) as f:
+    m = json.load(f)
+m.setdefault("plugins", []).append({
+    "name": "estrova",
+    "description": "Personal Strava training coach — training plans, performance analysis and conflict resolution",
+    "version": "1.0.0",
+    "author": {"name": "booscaaa"},
+    "source": "./plugins/estrova",
+    "category": "health"
+})
+with open(path, "w") as f:
+    json.dump(m, f, indent=2)
+PYEOF
+  fi
+else
+  mkdir -p "$(dirname "$MARKETPLACE")"
+  cat > "$MARKETPLACE" <<EOF
+{
+  "\$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "local",
+  "description": "Local plugins for personal use",
+  "owner": {"name": "$(whoami)"},
+  "plugins": [
+    {
+      "name": "estrova",
+      "description": "Personal Strava training coach — training plans, performance analysis and conflict resolution",
+      "version": "1.0.0",
+      "author": {"name": "$(whoami)"},
+      "source": "./plugins/estrova",
+      "category": "health"
+    }
+  ]
+}
+EOF
+fi
+
 SETTINGS="$HOME/.claude/settings.json"
-  if [ -f "$SETTINGS" ]; then
-    if ! grep -q '"estrova@local"' "$SETTINGS"; then
-      python3 - "$SETTINGS" <<'PYEOF'
+if [ -f "$SETTINGS" ]; then
+  if ! grep -q '"estrova@local"' "$SETTINGS"; then
+    python3 - "$SETTINGS" <<'PYEOF'
 import json, sys
 path = sys.argv[1]
 with open(path) as f:
@@ -108,10 +162,10 @@ s.setdefault("extraKnownMarketplaces", {}).setdefault("local", {
 with open(path, "w") as f:
     json.dump(s, f, indent=4)
 PYEOF
-    fi
-  else
-    mkdir -p "$(dirname "$SETTINGS")"
-    cat > "$SETTINGS" <<EOF
+  fi
+else
+  mkdir -p "$(dirname "$SETTINGS")"
+  cat > "$SETTINGS" <<EOF
 {
     "enabledPlugins": {
         "estrova@local": true
@@ -126,7 +180,7 @@ PYEOF
     }
 }
 EOF
-  fi
+fi
 echo "Skills installed!"
 
 # Register MCP server in Claude Code
