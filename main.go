@@ -6,12 +6,21 @@ import (
 	"os"
 
 	"github.com/booscaaa/estrova/internal/tools"
+	"github.com/booscaaa/estrova/internal/updater"
 	"github.com/booscaaa/estrova/internal/web"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "update" {
+		if err := updater.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "Erro: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	// Start web server in background
 	go web.Start(3030)
 
