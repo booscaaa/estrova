@@ -1,113 +1,117 @@
-# Estrova for Claude Code
+<p align="center">
+  <img src="logo.svg" width="96" height="96" alt="Estrova" />
+</p>
 
-A Model Context Protocol (MCP) server that integrates your Strava fitness data with Claude Code. Get AI-powered training plans, performance analysis, and a web dashboard — all driven by your real Strava history.
+# Estrova para Claude Code
 
-## What it does
+Um servidor MCP (Model Context Protocol) que integra seus dados de treino do Strava com o Claude Code. Obtenha planos de treino personalizados por IA, análise de desempenho e um dashboard web — tudo baseado no seu histórico real do Strava.
 
-- Authenticates with Strava via OAuth2 and syncs your activities to a local SQLite database
-- Exposes 16 MCP tools so Claude can read your profile, stats, HR zones, activities, and training goals
-- Generates and stores personalized multi-week training plans based on your history
-- Detects scheduling conflicts across multiple concurrent goals
-- Serves a web dashboard at `http://localhost:3030` for visual plan management
+## O que ele faz
 
----
-
-## Table of Contents
-
-1. [Prerequisites](#prerequisites)
-2. [Getting Strava API Credentials](#getting-strava-api-credentials)
-3. [Installation](#installation)
-   - [Option A — Install via GitHub (recommended)](#option-a--install-via-github-recommended)
-   - [Option B — Build from source](#option-b--build-from-source)
-4. [Configuring Claude Code](#configuring-claude-code)
-5. [First-time Authentication](#first-time-authentication)
-6. [Syncing Activities](#syncing-activities)
-7. [Creating a Training Goal and Plan](#creating-a-training-goal-and-plan)
-8. [Web Dashboard](#web-dashboard)
-9. [Available MCP Tools](#available-mcp-tools)
-10. [Database](#database)
+- Autentica com o Strava via OAuth2 e sincroniza suas atividades em um banco SQLite local
+- Expõe 16 ferramentas MCP para o Claude ler seu perfil, estatísticas, zonas de FC, atividades e objetivos de treino
+- Gera e armazena planos de treino personalizados de múltiplas semanas com base no seu histórico
+- Detecta conflitos de agendamento entre múltiplos objetivos simultâneos
+- Serve um dashboard web em `http://localhost:3030` para gerenciamento visual do plano
 
 ---
 
-## Prerequisites
+## Índice
 
-- [Claude Code](https://claude.ai/code) installed
-- A [Strava](https://www.strava.com) account
-
-No other runtime is required — pre-built binaries are provided for Linux, macOS, and Windows.
+1. [Pré-requisitos](#pré-requisitos)
+2. [Obtendo as credenciais da API do Strava](#obtendo-as-credenciais-da-api-do-strava)
+3. [Instalação](#instalação)
+4. [Configurando o Claude Code](#configurando-o-claude-code)
+5. [Autenticação inicial](#autenticação-inicial)
+6. [Sincronizando atividades](#sincronizando-atividades)
+7. [Criando um objetivo e plano de treino](#criando-um-objetivo-e-plano-de-treino)
+8. [Dashboard web](#dashboard-web)
+9. [Ferramentas MCP disponíveis](#ferramentas-mcp-disponíveis)
+10. [Banco de dados](#banco-de-dados)
 
 ---
 
-## Getting Strava API Credentials
+## Pré-requisitos
 
-You need to register an application on Strava to get the credentials used during authentication. This is a one-time setup.
+- [Claude Code](https://claude.ai/code) instalado
+- Uma conta no [Strava](https://www.strava.com)
 
-### Step 1 — Access the Strava API settings
+Nenhum outro runtime é necessário — binários pré-compilados são fornecidos para Linux, macOS e Windows.
 
-Go to [https://www.strava.com/settings/api](https://www.strava.com/settings/api).
+---
 
-If prompted, log in to your Strava account first.
+## Obtendo as credenciais da API do Strava
 
-### Step 2 — Create your application
+Você precisa registrar um aplicativo no Strava para obter as credenciais usadas na autenticação. Esse processo é feito apenas uma vez.
 
-Fill in the form with the following values:
+> Para uma visão geral completa da API do Strava, consulte a [documentação oficial de primeiros passos](https://developers.strava.com/docs/getting-started/).
 
-| Field | Value |
+### Passo 1 — Acesse as configurações da API do Strava
+
+Acesse [https://www.strava.com/settings/api](https://www.strava.com/settings/api).
+
+Se solicitado, faça login na sua conta Strava primeiro.
+
+### Passo 2 — Crie seu aplicativo
+
+Preencha o formulário com os seguintes valores:
+
+| Campo | Valor |
 |-------|-------|
-| **Application Name** | Anything you like, e.g. `My Claude Coach` |
-| **Category** | Choose any (e.g. `Other`) |
-| **Club** | Leave blank |
+| **Nome do aplicativo** | Qualquer nome, ex: `Meu Coach Claude` |
+| **Categoria** | Qualquer (ex: `Outro`) |
+| **Clube** | Deixe em branco |
 | **Website** | `http://localhost` |
-| **Application Description** | Optional |
-| **Authorization Callback Domain** | `localhost` |
+| **Descrição** | Opcional |
+| **Domínio de callback de autorização** | `localhost` |
 
-Click **Create** (or **Update** if a previous app already exists).
+Clique em **Criar** (ou **Atualizar** se já existir um aplicativo anterior).
 
-### Step 3 — Copy your credentials
+### Passo 3 — Copie suas credenciais
 
-After saving, the page shows your application details. Note down:
+Após salvar, a página exibe os detalhes do aplicativo. Anote:
 
-- **Client ID** — a short number, e.g. `152485`
-- **Client Secret** — a long hex string
+- **Client ID** — um número curto, ex: `152485`
+- **Client Secret** — uma string hexadecimal longa
 
-> These credentials are sensitive. Never share them or commit them to a repository.
+> Essas credenciais são sensíveis. Nunca as compartilhe nem as comite em repositórios.
 
-### Step 4 — Upload an app icon (optional)
+### Passo 4 — Faça upload de um ícone (opcional)
 
-Strava requires an icon before the OAuth consent screen works. Upload any image (PNG/JPG, minimum 124×124 px) in the **App Icon** field and save.
-
----
-
-> **Note:** The authorization callback URL used by this MCP server is `http://localhost:8765/callback`. Strava only checks the **domain** (`localhost`), so no further URL configuration is needed.
+O Strava exige um ícone antes que a tela de consentimento OAuth funcione. Faça upload de qualquer imagem (PNG/JPG, mínimo 124×124 px) no campo **Ícone do aplicativo** e salve.
 
 ---
 
-## Installation
+> **Observação:** A URL de callback de autorização usada por este servidor MCP é `http://localhost:8765/callback`. O Strava verifica apenas o **domínio** (`localhost`), portanto nenhuma configuração adicional de URL é necessária.
 
-Pre-built binaries are published automatically on every release. No Go installation required.
+---
 
-### Linux / macOS (one-liner)
+## Instalação
+
+Binários pré-compilados são publicados automaticamente a cada release. Não é necessário ter Go instalado.
+
+### Linux / macOS (uma linha)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/booscaaa/estrova/main/install.sh | bash
 ```
 
-This script detects your OS and architecture, downloads the correct binary from the latest GitHub release, and places it at `/usr/local/bin/estrova`.
+Este script detecta seu sistema operacional e arquitetura, baixa o binário correto da última release do GitHub, instala em `/usr/local/bin/estrova` e também instala as skills do estrova no Claude Code.
 
-### Manual download
+### Download manual
 
-1. Go to the [Releases page](https://github.com/booscaaa/estrova/releases/latest)
-2. Download the archive for your platform:
+1. Acesse a [página de Releases](https://github.com/booscaaa/estrova/releases/latest)
+2. Baixe o arquivo para sua plataforma:
 
-| Platform | File |
-|----------|------|
+| Plataforma | Arquivo |
+|------------|---------|
 | Linux x86-64 | `estrova_linux_amd64.tar.gz` |
 | Linux ARM64 | `estrova_linux_arm64.tar.gz` |
 | macOS x86-64 (Intel) | `estrova_darwin_amd64.tar.gz` |
 | macOS ARM64 (Apple Silicon) | `estrova_darwin_arm64.tar.gz` |
 | Windows x86-64 | `estrova_windows_amd64.zip` |
 
-3. Extract and move the binary:
+3. Extraia e mova o binário:
 
 ```bash
 # Linux / macOS
@@ -117,20 +121,20 @@ chmod +x /usr/local/bin/estrova
 ```
 
 ```powershell
-# Windows — extract the zip, then move estrova.exe to a folder on your PATH
-# e.g. C:\Users\<you>\bin\estrova.exe
+# Windows — extraia o zip e mova estrova.exe para uma pasta no seu PATH
+# ex: C:\Users\<voce>\bin\estrova.exe
 ```
 
-4. Verify:
+4. Verifique:
 
 ```bash
 estrova
 # Estrova MCP server iniciado — Web UI: http://localhost:3030
 ```
 
-### Build from source (optional)
+### Compilar do fonte (opcional)
 
-Only needed if you want to modify the code:
+Necessário apenas se quiser modificar o código:
 
 ```bash
 git clone https://github.com/booscaaa/estrova.git
@@ -141,11 +145,11 @@ sudo mv estrova /usr/local/bin/
 
 ---
 
-## Configuring Claude Code
+## Configurando o Claude Code
 
-### Global configuration (all projects)
+### Configuração global (todos os projetos)
 
-Edit `~/.claude/settings.json`:
+Edite `~/.claude/settings.json`:
 
 ```json
 {
@@ -153,19 +157,19 @@ Edit `~/.claude/settings.json`:
     "estrova": {
       "command": "estrova",
       "env": {
-        "STRAVA_CLIENT_ID": "your_client_id",
-        "STRAVA_CLIENT_SECRET": "your_client_secret"
+        "STRAVA_CLIENT_ID": "seu_client_id",
+        "STRAVA_CLIENT_SECRET": "seu_client_secret"
       }
     }
   }
 }
 ```
 
-Replace `estrova` with the full path to the binary if it is not on your `$PATH`.
+Substitua `estrova` pelo caminho completo do binário caso ele não esteja no seu `$PATH`.
 
-### Project-level configuration
+### Configuração por projeto
 
-Create or edit `.mcp.json` in the root of your project:
+Crie ou edite `.mcp.json` na raiz do seu projeto:
 
 ```json
 {
@@ -173,197 +177,197 @@ Create or edit `.mcp.json` in the root of your project:
     "estrova": {
       "command": "/usr/local/bin/estrova",
       "env": {
-        "STRAVA_CLIENT_ID": "your_client_id",
-        "STRAVA_CLIENT_SECRET": "your_client_secret"
+        "STRAVA_CLIENT_ID": "seu_client_id",
+        "STRAVA_CLIENT_SECRET": "seu_client_secret"
       }
     }
   }
 }
 ```
 
-> **Tip:** Add `.mcp.json` to `.gitignore` so your credentials are never committed.
+> **Dica:** Adicione `.mcp.json` ao `.gitignore` para que suas credenciais nunca sejam commitadas.
 
-### Verifying the MCP server is connected
+### Verificando se o servidor MCP está conectado
 
-Start Claude Code and run:
+Abra o Claude Code e execute:
 
 ```
 /mcp
 ```
 
-You should see `estrova` listed as a connected server. If not, check the path to the binary and that your environment variables are set.
+Você deve ver `estrova` listado como servidor conectado. Caso contrário, verifique o caminho do binário e as variáveis de ambiente.
 
 ---
 
-## First-time Authentication
+## Autenticação inicial
 
-The very first thing you need to do is authenticate with Strava. In Claude Code, just ask:
-
-```
-authenticate with strava
-```
-
-Claude will call `estrova_authenticate`, which:
-
-1. Starts a local callback server on `http://localhost:8765/callback`
-2. Opens your browser to the Strava OAuth consent page
-3. After you approve, exchanges the code for an access token
-4. Saves the token to `~/.estrova.db` (SQLite)
-
-The token is automatically refreshed whenever it expires — you only need to authenticate once.
-
-**Check authentication status:**
+A primeira coisa que você precisa fazer é autenticar com o Strava. No Claude Code, basta perguntar:
 
 ```
-what's my strava auth status?
+autenticar com strava
+```
+
+O Claude chamará `estrova_authenticate`, que:
+
+1. Inicia um servidor local de callback em `http://localhost:8765/callback`
+2. Abre seu navegador na página de consentimento OAuth do Strava
+3. Após você aprovar, troca o código por um token de acesso
+4. Salva o token em `~/.estrova.db` (SQLite)
+
+O token é atualizado automaticamente quando expira — você só precisa autenticar uma vez.
+
+**Verificar status da autenticação:**
+
+```
+qual é o status da minha autenticação no strava?
 ```
 
 ---
 
-## Syncing Activities
+## Sincronizando atividades
 
-After authenticating, sync your Strava activities to the local database:
-
-```
-sync my strava activities
-```
-
-By default, this fetches up to 5 pages (1 000 activities). To fetch more:
+Após autenticar, sincronize suas atividades do Strava no banco local:
 
 ```
-sync my strava activities, fetch 10 pages
+sincronizar minhas atividades do strava
 ```
 
-Synced activities are stored locally and matched automatically against your training plan sessions.
+Por padrão, busca até 5 páginas (1.000 atividades). Para buscar mais:
+
+```
+sincronizar minhas atividades do strava, buscar 10 páginas
+```
+
+As atividades sincronizadas são armazenadas localmente e associadas automaticamente às sessões do seu plano de treino.
 
 ---
 
-## Creating a Training Goal and Plan
+## Criando um objetivo e plano de treino
 
-### 1. Create a goal
+### 1. Criar um objetivo
 
 ```
-create a strava goal: Marathon in October 2026
+criar objetivo strava: Maratona em outubro de 2026
 ```
 
-Claude will call `estrova_create_goal` with parameters like:
+O Claude chamará `estrova_create_goal` com parâmetros como:
 
-| Parameter | Example |
+| Parâmetro | Exemplo |
 |-----------|---------|
-| `name` | `Marathon 2026` |
+| `name` | `Maratona 2026` |
 | `sport_type` | `Run` |
 | `target_type` | `distance` |
 | `target_value` | `42.2` |
 | `target_date` | `2026-10-15` |
 
-### 2. Generate a training plan
+### 2. Gerar um plano de treino
 
 ```
-generate a training plan for my Marathon 2026 goal
+gerar um plano de treino para meu objetivo Maratona 2026
 ```
 
-Claude will:
+O Claude irá:
 
-1. Call `estrova_analyze_for_goal` — fetches your recent activities, HR zones, other goal sessions, and scheduling constraints
-2. Use that data to build a personalized multi-week plan
-3. Call `estrova_save_plan` — persists the plan to the database, linked to your goal
+1. Chamar `estrova_analyze_for_goal` — busca suas atividades recentes, zonas de FC, sessões de outros objetivos e restrições de agenda
+2. Usar esses dados para construir um plano personalizado de múltiplas semanas
+3. Chamar `estrova_save_plan` — persiste o plano no banco vinculado ao objetivo
 
-### 3. View your plan
-
-```
-show me my training plan for Marathon 2026
-```
-
-Or open the [web dashboard](#web-dashboard) at `http://localhost:3030`.
-
-### 4. Resolve conflicts
-
-If you have multiple concurrent goals, sessions from different plans may clash on the same day:
+### 3. Visualizar seu plano
 
 ```
-are there any conflicts in my training plans?
+mostrar meu plano de treino para Maratona 2026
 ```
 
-Claude will call `estrova_list_conflicts` and help you reschedule sessions.
+Ou abra o [dashboard web](#dashboard-web) em `http://localhost:3030`.
+
+### 4. Resolver conflitos
+
+Se você tiver múltiplos objetivos simultâneos, sessões de planos diferentes podem colidir no mesmo dia:
+
+```
+existe algum conflito nos meus planos de treino?
+```
+
+O Claude chamará `estrova_list_conflicts` e ajudará a reagendar as sessões.
 
 ---
 
-## Web Dashboard
+## Dashboard web
 
-The web server starts automatically when the MCP server launches.
+O servidor web inicia automaticamente junto com o servidor MCP.
 
-Open [http://localhost:3030](http://localhost:3030) in your browser.
+Abra [http://localhost:3030](http://localhost:3030) no seu navegador.
 
-**Features:**
+**Funcionalidades:**
 
-- Goals overview with progress (completed / total sessions)
-- Weekly training plan view with session details
-- Activities list with sync status
-- Conflict detector across all active goals
-- Edit individual sessions (type, pace, HR zone, distance, duration)
-- Dashboard with weekly volume and pace trend charts
-
----
-
-## Available MCP Tools
-
-### Authentication
-
-| Tool | Description |
-|------|-------------|
-| `estrova_authenticate` | OAuth2 login — opens browser, saves token |
-| `estrova_auth_status` | Check token validity and synced activity count |
-
-### Activities
-
-| Tool | Parameters | Description |
-|------|------------|-------------|
-| `estrova_sync` | `pages` (default 5) | Fetch & sync activities from Strava |
-| `estrova_list_activities` | `type`, `after`, `before`, `limit` | Query local database |
-| `estrova_get_activity` | `activity_id` | Full activity detail (laps, segments, best efforts) |
-
-### Athlete Profile
-
-| Tool | Description |
-|------|-------------|
-| `estrova_get_athlete` | Name, city, country, premium status |
-| `estrova_get_athlete_stats` | Run/bike/swim totals (recent, YTD, all-time) |
-| `estrova_get_athlete_zones` | Heart rate and power zones |
-
-### Goals & Plans
-
-| Tool | Parameters | Description |
-|------|------------|-------------|
-| `estrova_create_goal` | `name`, `sport_type`, `target_type`, `target_value`, `target_date` | Create a new training goal |
-| `estrova_list_goals` | — | List all goals with progress |
-| `estrova_delete_goal` | `goal_id` | Remove goal and its plan |
-| `estrova_analyze_for_goal` | `goal_id` | Collect context for plan generation |
-| `estrova_save_plan` | `goal_id`, `plan_json` | Persist generated plan to database |
-| `estrova_get_plan` | `goal_id` | Retrieve plan organized by week |
-| `estrova_list_conflicts` | — | Detect scheduling conflicts across goals |
-| `estrova_update_session` | `session_id`, fields | Edit a session in the plan |
+- Visão geral dos objetivos com progresso (sessões concluídas / total)
+- Visualização semanal do plano com detalhes das sessões
+- Lista de atividades com status de sincronização
+- Detector de conflitos entre todos os objetivos ativos
+- Edição individual de sessões (tipo, pace, zona de FC, distância, duração)
+- Dashboard com gráficos de volume semanal e tendência de pace
 
 ---
 
-## Database
+## Ferramentas MCP disponíveis
 
-All data is stored in a single SQLite file at:
+### Autenticação
+
+| Ferramenta | Descrição |
+|------------|-----------|
+| `estrova_authenticate` | Login OAuth2 — abre o navegador e salva o token |
+| `estrova_auth_status` | Verifica validade do token e quantidade de atividades sincronizadas |
+
+### Atividades
+
+| Ferramenta | Parâmetros | Descrição |
+|------------|------------|-----------|
+| `estrova_sync` | `pages` (padrão 5) | Busca e sincroniza atividades do Strava |
+| `estrova_list_activities` | `type`, `after`, `before`, `limit` | Consulta o banco local |
+| `estrova_get_activity` | `activity_id` | Detalhes completos da atividade (laps, segmentos, melhores esforços) |
+
+### Perfil do atleta
+
+| Ferramenta | Descrição |
+|------------|-----------|
+| `estrova_get_athlete` | Nome, cidade, país, status premium |
+| `estrova_get_athlete_stats` | Totais de corrida/bike/natação (recente, no ano, histórico) |
+| `estrova_get_athlete_zones` | Zonas de frequência cardíaca e potência |
+
+### Objetivos e planos
+
+| Ferramenta | Parâmetros | Descrição |
+|------------|------------|-----------|
+| `estrova_create_goal` | `name`, `sport_type`, `target_type`, `target_value`, `target_date` | Cria um novo objetivo de treino |
+| `estrova_list_goals` | — | Lista todos os objetivos com progresso |
+| `estrova_delete_goal` | `goal_id` | Remove o objetivo e seu plano |
+| `estrova_analyze_for_goal` | `goal_id` | Coleta contexto para geração do plano |
+| `estrova_save_plan` | `goal_id`, `plan_json` | Persiste o plano gerado no banco |
+| `estrova_get_plan` | `goal_id` | Retorna o plano organizado por semana |
+| `estrova_list_conflicts` | — | Detecta conflitos de agendamento entre objetivos |
+| `estrova_update_session` | `session_id`, campos | Edita uma sessão do plano |
+
+---
+
+## Banco de dados
+
+Todos os dados são armazenados em um único arquivo SQLite em:
 
 ```
 ~/.estrova.db
 ```
 
-It is created automatically on first run. Tables:
+O arquivo é criado automaticamente na primeira execução. Tabelas:
 
-| Table | Contents |
-|-------|----------|
-| `tokens` | OAuth2 access/refresh tokens |
-| `athlete` | Cached athlete profile |
-| `activities` | Synced Strava activities |
-| `goals` | Training goals |
-| `plan_sessions` | Individual sessions per goal (weeks / workouts) |
+| Tabela | Conteúdo |
+|--------|----------|
+| `tokens` | Tokens de acesso/refresh OAuth2 |
+| `athlete` | Perfil do atleta em cache |
+| `activities` | Atividades sincronizadas do Strava |
+| `goals` | Objetivos de treino |
+| `plan_sessions` | Sessões individuais por objetivo (semanas / treinos) |
 
-To inspect it directly:
+Para inspecionar diretamente:
 
 ```bash
 sqlite3 ~/.estrova.db ".tables"
@@ -372,15 +376,15 @@ sqlite3 ~/.estrova.db "SELECT name, target_date FROM goals;"
 
 ---
 
-## Environment Variables
+## Variáveis de ambiente
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `STRAVA_CLIENT_ID` | Yes | Client ID from Strava API settings |
-| `STRAVA_CLIENT_SECRET` | Yes | Client secret from Strava API settings |
+| Variável | Obrigatória | Descrição |
+|----------|-------------|-----------|
+| `STRAVA_CLIENT_ID` | Sim | Client ID das configurações da API do Strava |
+| `STRAVA_CLIENT_SECRET` | Sim | Client secret das configurações da API do Strava |
 
 ---
 
-## License
+## Licença
 
 MIT
